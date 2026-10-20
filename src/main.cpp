@@ -17,6 +17,16 @@ struct NOTE {
 int main(int argc, char *argv[]) {
   argparse::ArgumentParser program("todo");
 
+  const std::string name_file = "TODO.txt";
+
+  std::filesystem::path todo_path;
+  char* HOME = getenv("HOME");
+  if (HOME == nullptr) {
+      todo_path = std::filesystem::current_path() / name_file;
+  } else {
+      todo_path = std::filesystem::path(HOME) / ".config" / "todo" / name_file;
+  }
+
   // Arguments
   program.add_argument("-n", "--new").help("Create a new register.");
   program.add_argument("-d", "--date").help("Orden by date.").flag();
@@ -24,7 +34,8 @@ int main(int argc, char *argv[]) {
       .help("Set the priority.")
       .default_value(3);
   program.add_argument("-t", "--todo-path")
-      .help("Path to TODO file");
+      .help("Path to TODO file.")
+      .default_value(todo_path);
 
   try {
     program.parse_args(argc, argv);
@@ -34,6 +45,16 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  todo_path = program.get<std::filesystem::path>("--todo-path");
+
+
+  if (!std::filesystem::exists(todo_path)) {
+      std::filesystem::create_directories(todo_path.parent_path());
+  }
+
+  if (program.is_used("--new")) {
+      file = todo_path;
+  }
 
 
 
