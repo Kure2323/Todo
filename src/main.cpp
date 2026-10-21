@@ -71,7 +71,8 @@ int main(int argc, char *argv[]) {
   // Write todo file
   if (program.is_used("--new")) {
     new_note(program);
-  } else {
+
+  } else if (!program.is_used("--completed")) {
     // Read todo file
     std::vector<Note> notes;
     std::vector<std::string> content = get_todo_content(notes);
@@ -84,6 +85,34 @@ int main(int argc, char *argv[]) {
       std::cout << i << std::endl;
     }
   }
+
+  if (program.is_used("--completed")) {
+      std::vector<Note> notes;
+      std::vector<std::string> content = get_todo_content(notes);
+
+      for (int i = 0; i < notes.size(); i++) {
+          std::cout << '(' << i << ") " <<
+              notes[i].content << " Prio->" << notes[i].priority
+          << std::endl;
+      }
+
+      std::string _answer;
+      std::cin >> _answer;
+
+      int answer = static_cast<int>(std::stoul(_answer));
+      std::ofstream file(todo_path);
+
+      for (int i = 0; i < content.size(); i++) {
+          if (i == answer) {
+              continue;
+          }
+          std::string tmp = content[i] + '\n';
+          file.write(tmp.c_str(), tmp.size());
+      }
+
+
+  }
+
 
 
 
@@ -166,16 +195,16 @@ void new_note(argparse::ArgumentParser &program) {
 void arguments(argparse::ArgumentParser &program) {
 
   // Arguments
-  program.add_argument("-n", "--new").help("Create a new register.");
-  program.add_argument("-d", "--date").help("Orden by date.").flag();
+  program.add_argument("-n", "--new").help("Create a new register");
+  program.add_argument("-c", "--completed").help("Complete a todo").flag();
   program.add_argument("-p", "--priority")
       .scan<'i', int>()
-      .help("Set the priority.")
+      .help("Set the priority")
       .default_value(3);
   program.add_argument("-t", "--todo-path")
-      .help("Path to TODO file.")
+      .help("Path to TODO file")
       .default_value(std::string{});
-  program.add_argument("-r", "--reverse").help("Reverse the output.").flag();
+  program.add_argument("-r", "--reverse").help("Reverse the output").flag();
 }
 
 std::string date_to_string() {
