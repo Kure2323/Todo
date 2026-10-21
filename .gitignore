@@ -1,4 +1,5 @@
-build/ 
+build_release/
+build/
 .cache/
 compile_commands.json
 out/

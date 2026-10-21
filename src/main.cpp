@@ -1,7 +1,5 @@
 #include <algorithm>
 #include <argparse/argparse.hpp>
-#include <bit>
-#include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
