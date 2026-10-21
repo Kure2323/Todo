@@ -1,21 +1,34 @@
 #include <algorithm>
 #include <argparse/argparse.hpp>
+#include <bit>
+#include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <ios>
 #include <iostream>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
+
+struct Note {
+    unsigned int priority;
+    std::string date;
+    std::string content;
+}; // 1|%date%|content
+
 constexpr unsigned int PRIO_MAX_VALUE = 3;
+static std::filesystem::path todo_path;
 
 void new_note(argparse::ArgumentParser &program);
 void arguments(argparse::ArgumentParser &program);
-std::vector<std::string> get_todo_content();
+std::vector<std::string> get_todo_content(std::vector<Note> &notes);
+std::string date_to_string();
+std::tm string_to_date(const std::string &date);
 
-static std::filesystem::path todo_path;
 
 int main(int argc, char *argv[]) {
   argparse::ArgumentParser program("todo");
@@ -60,16 +73,28 @@ int main(int argc, char *argv[]) {
     new_note(program);
   } else {
     // Read todo file
-    std::vector<std::string> content = get_todo_content();
+    std::vector<Note> notes;
+    std::vector<std::string> content = get_todo_content(notes);
+
+    if (!program.is_used("--reverse")) {
+        std::reverse(content.begin(), content.end());
+    }
+
     for (std::string i : content) {
       std::cout << i << std::endl;
     }
   }
 
+
+
   return 0;
 }
 
-std::vector<std::string> get_todo_content() {
+
+/**
+ * Gets all the content in the todo file
+ */
+std::vector<std::string> get_todo_content(std::vector<Note> &notes) {
 
   std::ifstream file(todo_path);
 
@@ -85,6 +110,25 @@ std::vector<std::string> get_todo_content() {
   }
 
   std::sort(content.begin(), content.end());
+
+  for (std::string i : content) {
+
+      // Split-like
+      std::vector<std::string> pieces;
+      std::stringstream ss(i);
+      std::string tmp;
+      while (std::getline(ss, tmp, '|')) {
+          pieces.push_back(tmp);
+      }
+      Note note {
+          static_cast<unsigned int>(std::stoul(pieces[0])),
+          date_to_string(),
+          pieces[2]
+      };
+      notes.push_back(note);
+
+  }
+
   file.close();
   return content;
 }
@@ -102,12 +146,16 @@ void new_note(argparse::ArgumentParser &program) {
 
   int priority = program.get<int>("--priority");
 
+  if (priority < 1 || priority > PRIO_MAX_VALUE) {
+      priority = 3;
+  }
+
   std::ofstream write(todo_path, std::ios::app);
   if (!write) {
     std::cerr << "Error opening file at writting time.";
     exit(1);
   }
-  std::string stream = std::to_string(priority) + " " + note.value() + '\n';
+  std::string stream = std::to_string(priority) + "|" + date_to_string() + "|" + note.value() + '\n';
   write.write(stream.c_str(), stream.size());
   write.close();
 }
@@ -127,4 +175,32 @@ void arguments(argparse::ArgumentParser &program) {
   program.add_argument("-t", "--todo-path")
       .help("Path to TODO file.")
       .default_value(std::string{});
+  program.add_argument("-r", "--reverse").help("Reverse the output.").flag();
+}
+
+std::string date_to_string() {
+    auto now = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t(now);
+
+    std::tm tm{};
+
+    localtime_r(&t, &tm);
+
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y-%m-%d %H:%M");
+
+    return oss.str();
+}
+
+std::tm string_to_date(const std::string& date) {
+    std::tm tm{};
+
+    std::istringstream iss(date);
+    iss >> std::get_time(&tm, "%Y-%m-%d %H:%M");
+
+    if (iss.fail()) {
+        throw std::invalid_argument("Formato de fecha inválido");
+    }
+
+    return tm;
 }
