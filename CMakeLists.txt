@@ -20,3 +20,6 @@ target_sources(todo
   src/main.cpp
 )
 
+install(TARGETS todo
+    RUNTIME DESTINATION bin
+)
